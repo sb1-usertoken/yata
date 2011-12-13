@@ -1,0 +1,6 @@
+<h3>Sur la dernière heure</h3>
+<ul>
+   <% tweetkeywords.forEach(function(keyword){ %>
+   <li><%= keyword._id %> (<a class="colorbox" href="/lastTweet/<%= keyword._id %>" target="_blank"><%= keyword.value %></a>)</li>
+   <% }) %>
+</ul>

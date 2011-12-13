@@ -1,0 +1,6 @@
+<h3>Détails</h3>
+<ul class="unstyled">
+       <% tweets.forEach(function(tweet){ %>
+       <li><b><%= tweet.postedAt.format("{dow}. {d}/{M} {HH}h{mm}") %></b> : <%= tweet.tweet %></li>
+       <% }) %>
+</ul>

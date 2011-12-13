@@ -1,0 +1,132 @@
+<script src="/javascripts/socket.io.js"></script>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+      google.setOnLoadCallback(drawByMin);
+
+      var refreshInterval;
+      
+      function drawByMin() {
+        var query = new google.visualization.Query('http://' + location.host + '/chart/by/min');
+        query.send(handleQueryResponse);
+        
+        if (refreshInterval) {clearInterval(refreshInterval);}
+        refreshInterval = setInterval(drawByMin, 20000);
+      }
+      
+      function drawByHour() {
+        var query = new google.visualization.Query('http://' + location.host + '/chart/by/hour');
+        query.send(handleQueryResponse);
+        
+        if (refreshInterval) {clearInterval(refreshInterval);}
+        refreshInterval = setInterval(drawByHour, 60000);
+      }
+      
+      function drawByDay() {
+        var query = new google.visualization.Query('http://' + location.host + '/chart/by/day');
+        query.send(handleQueryResponse);
+        
+        if (refreshInterval) {clearInterval(refreshInterval);}
+        refreshInterval = setInterval(drawByDay, 60000);
+      }
+      
+      var data;
+      function handleQueryResponse(response) {
+        if (response.isError()) {
+          alert('Error in query: ' + response.getMessage() + ' ' + response.getDetailedMessage());
+          return;
+        }
+        data = response.getDataTable();
+        chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+        chart.draw(data, {  width: 700,
+                            height: 290,
+                            hAxis: { titleTextStyle: {color: '#FF0000'}, maxAlternation : 1 },
+                            vAxis: { minValue : 0 },
+                            legend : 'none',
+                            chartArea : {top:"10", width:"600", height:"200"}
+                         });
+        // open tweets list on click 
+        google.visualization.events.addListener(chart, 'select', selectHandler);
+      }
+      
+      // The selection handler open tweets list on click 
+        function selectHandler() {
+          var selection = chart.getSelection();
+          var beginDate = data.G[selection[0].row].c[0].p.date;
+          var endDate = (selection[0].row < data.G.length) ?  data.G[selection[0].row+1].c[0].p.date : '' ;
+          var href = "/tweetByDate/" + beginDate + '/' + endDate;
+          $.colorbox( { 
+                        href:href,
+                        maxHeight:'80%',
+                        maxWidth:'80%'
+                      });
+        }
+        
+        $(document).ready(function(){
+           // launch socket.io
+           var socket = io.connect('http://' + location.hostname);
+           
+           // tweet real time update
+           $("#tweetAutoUpdate").change(function() { 
+             if ($('#tweetAutoUpdate').attr('checked')) {
+                 socket.on('tweet', function (data) {
+                   $("#tweets ul").append("<li>" + data.tweet + "</li>");
+                   $("#tweets ul li:first").remove();
+                 });
+             }
+             else {
+                socket.removeAllListeners('tweet') 
+             }
+           });
+           
+           $("#tweetAutoUpdate").trigger('change');
+           
+           // 
+           $("#graph_buttons a").click(function() {
+             $("#graph_buttons a.success").removeClass('success').addClass('default');
+             $(this).addClass('success').removeClass('default');
+          });
+          
+          // refresh top words every 30 seconds
+          setInterval(function() {
+                $('#top-words').load('/top-words/');
+          }, 30000);
+        });
+    </script>
+
+<div class="row">
+  <div id="graph" class="span12">
+    <h2>Graphe d'activité</h2>
+    <p></p>
+    <div id="graph_buttons">
+      <a href="#" onclick="drawByDay();return false;" class="btn default small">Tweets/jours</a>
+      <a href="#" onclick="drawByHour();return false;" class="btn default small">Tweets/heure</a></li>
+      <a href="#" onclick="drawByMin();return false;" class="btn success small">Tweets/10min</a></li>
+    </div>
+    <div id="chart_div"></div>
+  </div>
+  <div id="top-words" class="span6">
+         <%- partial('partial/top-words', { object: tweetkeywords, as: this }) %>
+  </div> 
+  <div id="tweets" class="span12">
+   <h3>Détails</h3>
+   <ul class="unstyled">
+          <% tweets.forEach(function(tweet){ %>
+          <li><%= tweet.tweet %></li>
+          <% }) %>
+   </ul>
+   <div class="input-append pull-right">
+     <input class="large uneditable-input" id="appendedInput" name="appendedInput" size="30" type="text" value="Actualisation automatique">           
+     <label class="add-on active"><input type="checkbox" name="" id="tweetAutoUpdate" value="" checked="checked"></label>
+   </div>
+ </div>
+ <div class="span6">
+   <h3>Mot clés référencés</h3>
+    <p>Liste des mots clés et hashstag requêtés sur <a href="https://dev.twitter.com/docs/streaming-api" target="_blank">stream.twitter.com</a></p>
+    <ul>
+        <% keywords.forEach(function(keyword){ %>
+        <li><%= keyword %></li>
+        <% }) %>
+     </ul>
+ </div>
+</div>

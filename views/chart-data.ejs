@@ -1,0 +1,21 @@
+google.visualization.Query.setResponse({
+  "reqId": <%= tqx %>,
+  "status": "ok",
+  "table": {
+      "cols": [
+                { "id": "", "label": "Date", "pattern": "", "type": "string" },
+                { "id": "", "label": "Tweets", "pattern": "", "type": "number" }
+              ],
+      "rows": [
+      <% data.forEach(function(d,idx){ %>
+                <%= (idx == 0) ? "" :"," %>
+                {"c": [
+                        {"v": "<%= d._id %>", "f": "<%= Date.create(d._id).format(date_format) %>", "p" : { "date" : "<%= Date.create(d._id).toISOString() %>" } },
+                        {"v": <%= d.value %>.0, "f": "<%= d.value %>" }
+                      ]
+                }
+      <% }) %>
+              ],
+      "p": null
+  }
+})
