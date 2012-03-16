@@ -1,6 +1,3 @@
-// we have some vendor
-require.paths.unshift(__dirname + '/lib/vendor');
-
 // add sugar syntax
 require('sugar/lib/sugar.js');
 Date.setLocale('fr');
@@ -12,19 +9,16 @@ var express = require('express')
   , routes  = require('./routes')
   , schema  = require('./lib/schema')
   , Poller  = require('./lib/poller')
-  , TwitterNode = require('twitter-node').TwitterNode
+  , ntwitter = require('ntwitter')
   , mongoose = require('mongoose')
+  , config   = require('config') 
   , sys = require('sys')
   , Log = require('log')
   , log = new Log('debug');
   
 // configure mongodb
-var mongodbUser = process.env.npm_package_config_mongodbuser;
-var mongodbPassword = process.env.npm_package_config_mongodbpassword;
-var mongodbServer = process.env.npm_package_config_mongodbserver;
-var mongodbDatabase = process.env.npm_package_config_mongodbdatabase
-
-mongoose.connect('mongodb://' + mongodbUser + ':' + mongodbPassword + '@' + mongodbServer +'/' + mongodbDatabase);
+var conf = config.mongodb;
+mongoose.connect('mongodb://' + conf.user + ':' + conf.password + '@' + conf.server +'/' + conf.database);
 
 var app = module.exports = express.createServer();
 var io = require('socket.io').listen(app);
@@ -66,16 +60,17 @@ app.configure('production', function(){
 });
 
 
-// configure twitternode
-var twitterNode = new TwitterNode({
-    user: process.env.npm_package_config_twitteruser,
-    password: process.env.npm_package_config_twitterpassword,
-    action: 'filter',     // http://apiwiki.twitter.com/Streaming-API-Documentation#Methods
-    limit: 100,
+// configure ntwitter
+var conf = config.twitter;
+var ntwitter = new ntwitter({
+    consumer_key: conf.consumer_key,
+    consumer_secret: conf.consumer_secret,
+    access_token_key: conf.access_token_key,
+    access_token_secret: conf.access_token_secret
 });
 
 // configure poller
-var poller = Poller.createPoller(twitterNode, process.env.npm_package_config_keywords.split(','), process.env.npm_package_config_stopwords.split(','));
+var poller = Poller.createPoller(ntwitter, config.keywords, config.stopwords);
 // each time we have a tweet
 poller.on('data', function(data) {
   // we store tweet in database
@@ -98,7 +93,7 @@ app.get('/tweetByDate/:begin/:end', routes.tweetByDate);
 app.get('/top-words/', routes.topWords);
 
 // Start server
-app.listen(process.env.npm_package_config_serverport);
+app.listen(config.serverport);
 
 var countByMin = [];
 var countByHour= [];
